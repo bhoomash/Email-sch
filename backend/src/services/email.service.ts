@@ -106,8 +106,30 @@ export class EmailService {
   }
 
   static async searchEmails(userId: string, queryText: string) {
-    // Search using Elasticsearch (scoped strictly to userId)
+    // 1. Try search using Elasticsearch (scoped strictly to userId)
     const esHits = await SearchService.searchUserEmails(userId, queryText);
-    return esHits;
+    if (esHits && esHits.length > 0) {
+      return esHits;
+    }
+
+    // 2. Fallback to PostgreSQL database search if Elasticsearch is offline or index empty
+    const dbHits = await prisma.email.findMany({
+      where: {
+        campaign: { userId },
+        OR: [
+          { recipient: { contains: queryText, mode: 'insensitive' } },
+          { subject: { contains: queryText, mode: 'insensitive' } },
+          { body: { contains: queryText, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        sender: { select: { email: true } },
+        campaign: { select: { subject: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    return dbHits;
   }
 }

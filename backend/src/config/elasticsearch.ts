@@ -4,6 +4,8 @@ import { logger } from '../utils/logger.js';
 
 export const esClient = new Client({
   node: env.ELASTICSEARCH_URL,
+  maxRetries: 1, // Prevent excessive retries when Elasticsearch is offline
+  requestTimeout: 2000,
 });
 
 export const EMAILS_INDEX = 'emails';
@@ -34,7 +36,7 @@ export async function initElasticsearch(): Promise<void> {
     }
     logger.info('✓ Elasticsearch connected');
   } catch (error) {
-    logger.warn({ error }, '✗ Elasticsearch connection failed or deferred');
+    logger.warn(`✗ Elasticsearch is offline on ${env.ELASTICSEARCH_URL} (Search index initialization deferred)`);
   }
 }
 
@@ -49,7 +51,7 @@ export async function checkElasticsearchHealth(): Promise<boolean> {
     }
     return isOk;
   } catch (error) {
-    logger.warn('✗ Elasticsearch connection failed');
+    logger.warn(`✗ Elasticsearch connection failed on ${env.ELASTICSEARCH_URL}`);
     return false;
   }
 }
