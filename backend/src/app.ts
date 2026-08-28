@@ -25,6 +25,9 @@ import { requireAuth } from './middleware/auth.middleware.js';
 
 export const app = express();
 
+// Trust reverse proxy header (Render, Vercel, Nginx)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(
   helmet({
@@ -32,9 +35,16 @@ app.use(
   })
 );
 
+// Dynamic CORS allowing FRONTEND_URL or Vercel deployment origins
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (!origin || origin === env.FRONTEND_URL || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
   })
 );
@@ -51,7 +61,7 @@ app.use(
     cookie: {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   })

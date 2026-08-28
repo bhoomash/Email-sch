@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { api } from '../services/api';
 import { Mail, ArrowRight, ShieldCheck, Zap, Server } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
@@ -9,7 +10,7 @@ export const Login: React.FC = () => {
   const [isDevLoggingIn, setIsDevLoggingIn] = useState(false);
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    window.location.href = `${api.defaults.baseURL}/auth/google`;
   };
 
   const handleDevSubmit = async (e: React.FormEvent) => {

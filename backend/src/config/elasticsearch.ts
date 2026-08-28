@@ -30,19 +30,26 @@ export async function initElasticsearch(): Promise<void> {
           },
         },
       });
-      logger.info({ index: EMAILS_INDEX }, 'Elasticsearch index created successfully');
+      logger.info({ index: EMAILS_INDEX }, '✓ Elasticsearch index initialized');
     }
+    logger.info('✓ Elasticsearch connected');
   } catch (error) {
-    logger.warn({ error }, 'Elasticsearch initialization deferred or unavailable');
+    logger.warn({ error }, '✗ Elasticsearch connection failed or deferred');
   }
 }
 
 export async function checkElasticsearchHealth(): Promise<boolean> {
   try {
     const health = await esClient.cluster.health({});
-    return health.status === 'green' || health.status === 'yellow';
+    const isOk = health.status === 'green' || health.status === 'yellow';
+    if (isOk) {
+      logger.info('✓ Elasticsearch health verified');
+    } else {
+      logger.warn({ status: health.status }, '✗ Elasticsearch cluster status degraded');
+    }
+    return isOk;
   } catch (error) {
-    logger.warn('Elasticsearch health check failed');
+    logger.warn('✗ Elasticsearch connection failed');
     return false;
   }
 }

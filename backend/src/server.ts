@@ -2,8 +2,8 @@ import { app } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { initElasticsearch } from './config/elasticsearch.js';
-import { prisma } from './config/database.js';
-import { redisConnection } from './config/redis.js';
+import { checkDatabaseHealth, prisma } from './config/database.js';
+import { checkRedisHealth, redisConnection } from './config/redis.js';
 import { emailQueue } from './queues/email.queue.js';
 import { emailWorker } from './queues/email.worker.js';
 
@@ -11,12 +11,16 @@ const PORT = env.PORT || 5000;
 
 async function startServer() {
   try {
-    // 1. Initialize Elasticsearch index
+    // 1. Verify connections to local infrastructure
+    await checkDatabaseHealth();
+    await checkRedisHealth();
     await initElasticsearch();
+
+    logger.info('✓ BullMQ worker started');
 
     // 2. Start HTTP server
     const server = app.listen(PORT, () => {
-      logger.info(`🚀 ReachInbox Backend API running on http://localhost:${PORT}`);
+      logger.info(`✓ API listening on port ${PORT}`);
       logger.info(`📊 Bull Board UI available on http://localhost:${PORT}/admin/queues`);
     });
 
