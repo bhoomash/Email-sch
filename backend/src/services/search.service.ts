@@ -1,4 +1,4 @@
-import { esClient, EMAILS_INDEX } from '../config/elasticsearch.js';
+import { esClient, EMAILS_INDEX, isEsConnected } from '../config/elasticsearch.js';
 import { logger } from '../utils/logger.js';
 
 export interface EmailSearchDoc {
@@ -17,6 +17,7 @@ export interface EmailSearchDoc {
 
 export class SearchService {
   static async indexEmail(doc: EmailSearchDoc): Promise<void> {
+    if (!isEsConnected) return;
     try {
       await esClient.index({
         index: EMAILS_INDEX,
@@ -39,6 +40,7 @@ export class SearchService {
     sentAt?: Date | null,
     errorMessage?: string | null
   ): Promise<void> {
+    if (!isEsConnected) return;
     try {
       await esClient.update({
         index: EMAILS_INDEX,
@@ -55,8 +57,10 @@ export class SearchService {
   }
 
   static async searchUserEmails(userId: string, queryText: string): Promise<any[]> {
+    if (!isEsConnected) return [];
     try {
       const response = await esClient.search({
+
         index: EMAILS_INDEX,
         query: {
           bool: {

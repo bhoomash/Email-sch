@@ -10,6 +10,8 @@ export const esClient = new Client({
 
 export const EMAILS_INDEX = 'emails';
 
+export let isEsConnected = false;
+
 export async function initElasticsearch(): Promise<void> {
   try {
     const indexExists = await esClient.indices.exists({ index: EMAILS_INDEX });
@@ -34,11 +36,14 @@ export async function initElasticsearch(): Promise<void> {
       });
       logger.info({ index: EMAILS_INDEX }, '✓ Elasticsearch index initialized');
     }
+    isEsConnected = true;
     logger.info('✓ Elasticsearch connected');
   } catch (error) {
+    isEsConnected = false;
     logger.warn(`✗ Elasticsearch is offline on ${env.ELASTICSEARCH_URL} (Search index initialization deferred)`);
   }
 }
+
 
 export async function checkElasticsearchHealth(): Promise<boolean> {
   try {

@@ -24,29 +24,39 @@ export const emailQueue = new Queue<EmailJobData>(EMAIL_QUEUE_NAME, {
 export async function enqueueEmailJob(data: EmailJobData, delayMs: number): Promise<string> {
   const jobId = generateBullJobId(data.emailId);
 
-  try {
-    const job = await emailQueue.add('send-email', data, {
-      jobId, // Deterministic ID ensures idempotency
-      delay: Math.max(0, delayMs),
-    });
+  // If Redis is online and ready, attempt BullMQ delayed enqueue with a 2s timeout
+  if (redisConnection.status === 'ready') {
+    try {
+      const job = (await Promise.race([
+        emailQueue.add('send-email', data, {
+          jobId, // Deterministic ID ensures idempotency
+          delay: Math.max(0, delayMs),
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('BullMQ enqueue timeout')), 2000)
+        ),
+      ])) as any;
 
-    logger.info({ jobId: job.id, emailId: data.emailId, delayMs }, 'Enqueued BullMQ delayed job');
-    return job.id!;
-  } catch (error: any) {
-    logger.warn(
-      { emailId: data.emailId, delayMs, error: error.message },
-      '⚠️ Redis is offline — activating in-process timer fallback to dispatch email job'
-    );
-
-    // Fallback: Schedule in-process dispatch using setTimeout / setImmediate
-    setTimeout(async () => {
-      try {
-        await processEmailJob(data, enqueueEmailJob);
-      } catch (err: any) {
-        logger.error({ emailId: data.emailId, err }, 'In-process fallback email dispatch failed');
-      }
-    }, Math.max(0, delayMs));
-
-    return jobId;
+      logger.info({ jobId: job.id, emailId: data.emailId, delayMs }, 'Enqueued BullMQ delayed job');
+      return job.id!;
+    } catch (error: any) {
+      logger.warn(
+        { emailId: data.emailId, delayMs, error: error.message },
+        '⚠️ BullMQ enqueue notice — activating in-process timer fallback to dispatch email job'
+      );
+    }
   }
+
+  // Fallback: Schedule in-process dispatch using setTimeout / setImmediate
+  logger.info({ emailId: data.emailId, delayMs }, '⚡ In-process timer dispatch activated');
+  setTimeout(async () => {
+    try {
+      await processEmailJob(data, enqueueEmailJob);
+    } catch (err: any) {
+      logger.error({ emailId: data.emailId, err }, 'In-process fallback email dispatch failed');
+    }
+  }, Math.max(0, delayMs));
+
+  return jobId;
 }
+

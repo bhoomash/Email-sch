@@ -27,12 +27,16 @@ export class RateLimitService {
 
     let currentCount = 1;
 
-    try {
-      currentCount = await redisConnection.incr(key);
-      if (currentCount === 1) {
-        await redisConnection.expire(key, 7200);
+    if (redisConnection.status === 'ready') {
+      try {
+        currentCount = await redisConnection.incr(key);
+        if (currentCount === 1) {
+          await redisConnection.expire(key, 7200);
+        }
+      } catch (err) {
+        // Fallback below
       }
-    } catch (err) {
+    } else {
       // In-memory fallback when Redis is offline
       const existing = this.memoryCounts.get(senderId);
       if (existing && existing.hour === hourWindow) {
@@ -72,12 +76,16 @@ export class RateLimitService {
     const now = Date.now();
     let lastSent: number | null = null;
 
-    try {
-      const lastSentStr = await redisConnection.get(key);
-      if (lastSentStr) {
-        lastSent = parseInt(lastSentStr, 10);
+    if (redisConnection.status === 'ready') {
+      try {
+        const lastSentStr = await redisConnection.get(key);
+        if (lastSentStr) {
+          lastSent = parseInt(lastSentStr, 10);
+        }
+      } catch (err) {
+        lastSent = this.memoryLastSent.get(senderId) || null;
       }
-    } catch (err) {
+    } else {
       lastSent = this.memoryLastSent.get(senderId) || null;
     }
 
@@ -93,11 +101,14 @@ export class RateLimitService {
     const currentTimestamp = Date.now();
     this.memoryLastSent.set(senderId, currentTimestamp);
 
-    try {
-      await redisConnection.set(key, currentTimestamp.toString(), 'PX', 3600000);
-    } catch (err) {
-      // Silently ignore Redis offline when setting last sent timestamp
+    if (redisConnection.status === 'ready') {
+      try {
+        await redisConnection.set(key, currentTimestamp.toString(), 'PX', 3600000);
+      } catch (err) {
+        // Silently ignore Redis offline
+      }
     }
+
   }
 
   /**

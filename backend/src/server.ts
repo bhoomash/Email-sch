@@ -21,7 +21,9 @@ async function startServer() {
     // 2. Perform service connectivity checks asynchronously
     checkDatabaseHealth().then(() => {
       SchedulerService.recoverScheduledEmails().catch((err) => logger.warn({ err }, 'Email recovery notice'));
+      SchedulerService.startPoller();
     }).catch((err) => logger.warn({ err }, 'PostgreSQL health notice'));
+
 
     checkRedisHealth().catch((err) => logger.warn({ err }, 'Redis health notice'));
     initElasticsearch().catch((err) => logger.warn({ err }, 'Elasticsearch notice'));

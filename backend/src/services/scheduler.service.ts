@@ -1,6 +1,9 @@
 import { enqueueEmailJob } from '../queues/email.queue.js';
+import { processEmailJob } from '../queues/email.processor.js';
 import { prisma, withDbRetry } from '../config/database.js';
 import { logger } from '../utils/logger.js';
+
+let isPollerRunning = false;
 
 export class SchedulerService {
   /**
@@ -33,9 +36,13 @@ export class SchedulerService {
    */
   static async recoverScheduledEmails(): Promise<number> {
     try {
-      const pendingEmails = await withDbRetry(() =>
+      const now = new Date();
+      const dueEmails = await withDbRetry(() =>
         prisma.email.findMany({
-          where: { status: 'SCHEDULED' },
+          where: {
+            status: 'SCHEDULED',
+            scheduledAt: { lte: now },
+          },
           select: {
             id: true,
             campaignId: true,
@@ -43,31 +50,53 @@ export class SchedulerService {
             scheduledAt: true,
             campaign: { select: { userId: true } },
           },
+          take: 50,
         })
       );
 
-      if (pendingEmails.length === 0) return 0;
+      if (dueEmails.length === 0) return 0;
 
-      logger.info({ count: pendingEmails.length }, 'Found pending SCHEDULED emails — enqueuing for dispatch');
+      logger.info({ count: dueEmails.length }, '⚡ Executing dispatch for due SCHEDULED emails');
 
-      const now = Date.now();
-      for (const email of pendingEmails) {
-        const delayMs = Math.max(0, email.scheduledAt.getTime() - now);
-        await enqueueEmailJob(
-          {
-            emailId: email.id,
-            campaignId: email.campaignId,
-            senderId: email.senderId,
-            userId: email.campaign.userId,
-          },
-          delayMs
-        );
+      for (const email of dueEmails) {
+        try {
+          await processEmailJob(
+            {
+              emailId: email.id,
+              campaignId: email.campaignId,
+              senderId: email.senderId,
+              userId: email.campaign.userId,
+            },
+            enqueueEmailJob
+          );
+        } catch (err: any) {
+          logger.error({ emailId: email.id, err: err.message }, 'Failed dispatch for due email');
+        }
       }
 
-      return pendingEmails.length;
+      return dueEmails.length;
     } catch (err: any) {
       logger.warn({ err: err.message }, 'Scheduled email recovery notice');
       return 0;
     }
   }
+
+  /**
+   * Starts periodic background heartbeat to dispatch due scheduled emails every 5 seconds.
+   */
+  static startPoller(intervalMs = 5000) {
+    if (isPollerRunning) return;
+    isPollerRunning = true;
+
+    logger.info('✓ Periodic email scheduler heartbeat started (5s interval)');
+
+    setInterval(async () => {
+      try {
+        await SchedulerService.recoverScheduledEmails();
+      } catch (err: any) {
+        // Silent catch for periodic poller
+      }
+    }, intervalMs);
+  }
 }
+
