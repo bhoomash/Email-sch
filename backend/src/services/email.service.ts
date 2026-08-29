@@ -18,31 +18,38 @@ export class EmailService {
       status: { in: ['SCHEDULED' as const, 'PROCESSING' as const, 'RATE_LIMITED' as const] },
     };
 
-    return withDbRetry(async () => {
-      const [items, total] = await Promise.all([
-        prisma.email.findMany({
-          where: whereClause,
-          orderBy: { scheduledAt: 'asc' },
-          skip,
-          take: limit,
-          include: {
-            sender: { select: { email: true } },
-            campaign: { select: { subject: true } },
-          },
-        }),
-        prisma.email.count({ where: whereClause }),
-      ]);
+    try {
+      return await withDbRetry(async () => {
+        const [items, total] = await Promise.all([
+          prisma.email.findMany({
+            where: whereClause,
+            orderBy: { scheduledAt: 'asc' },
+            skip,
+            take: limit,
+            include: {
+              sender: { select: { email: true } },
+              campaign: { select: { subject: true } },
+            },
+          }),
+          prisma.email.count({ where: whereClause }),
+        ]);
 
+        return {
+          items,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit) || 1,
+          },
+        };
+      });
+    } catch (err) {
       return {
-        items,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
+        items: [],
+        pagination: { page, limit, total: 0, totalPages: 0 },
       };
-    });
+    }
   }
 
   static async getSentEmails(userId: string, options: PaginationOptions = {}) {
@@ -55,32 +62,40 @@ export class EmailService {
       status: { in: ['SENT' as const, 'FAILED' as const] },
     };
 
-    return withDbRetry(async () => {
-      const [items, total] = await Promise.all([
-        prisma.email.findMany({
-          where: whereClause,
-          orderBy: { sentAt: 'desc' },
-          skip,
-          take: limit,
-          include: {
-            sender: { select: { email: true } },
-            campaign: { select: { subject: true } },
-          },
-        }),
-        prisma.email.count({ where: whereClause }),
-      ]);
+    try {
+      return await withDbRetry(async () => {
+        const [items, total] = await Promise.all([
+          prisma.email.findMany({
+            where: whereClause,
+            orderBy: { updatedAt: 'desc' },
+            skip,
+            take: limit,
+            include: {
+              sender: { select: { email: true } },
+              campaign: { select: { subject: true } },
+            },
+          }),
+          prisma.email.count({ where: whereClause }),
+        ]);
 
+        return {
+          items,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit) || 1,
+          },
+        };
+      });
+    } catch (err) {
       return {
-        items,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
+        items: [],
+        pagination: { page, limit, total: 0, totalPages: 0 },
       };
-    });
+    }
   }
+
 
   static async getEmailById(userId: string, emailId: string) {
     return withDbRetry(async () => {

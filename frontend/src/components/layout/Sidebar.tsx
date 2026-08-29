@@ -20,20 +20,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   sentCount = 0,
 }) => {
   return (
-    <aside className="w-64 shrink-0 bg-white border-r border-gray-300 min-h-[calc(100vh-4rem)] flex flex-col p-4 select-none">
+    <aside className="w-full lg:w-64 shrink-0 bg-white lg:border-r border-gray-300 min-h-[calc(100vh-4rem)] flex flex-col p-4 select-none">
       {/* Brand Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200 mb-4">
+      <div className="hidden lg:flex items-center justify-between pb-4 border-b border-gray-200 mb-4">
         <div className="flex items-center gap-2">
           <span className="font-extrabold text-xl tracking-tight text-gray-900">ONB</span>
         </div>
       </div>
 
       {/* User Profile Card */}
-      <div className="flex items-center gap-3 p-2 bg-[#f8faf9] rounded-none border border-gray-300 mb-5">
+      <div className="flex items-center gap-3 p-2.5 bg-[#f8faf9] rounded-none border border-gray-300 mb-5">
         {user.avatar ? (
-          <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-none object-cover" />
+          <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-none object-cover shrink-0" />
         ) : (
-          <div className="w-8 h-8 rounded-none bg-[#e6f4ea] text-[#00a854] font-bold text-xs flex items-center justify-center border border-emerald-300">
+          <div className="w-8 h-8 rounded-none bg-[#e6f4ea] text-[#00a854] font-bold text-xs flex items-center justify-center border border-emerald-300 shrink-0">
             {user.name.charAt(0).toUpperCase()}
           </div>
         )}
@@ -106,4 +106,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </aside>
   );
 };
+
 

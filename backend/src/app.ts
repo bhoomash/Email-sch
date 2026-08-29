@@ -104,16 +104,19 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
+import { SafeBullMQAdapter } from './utils/safe-bull-adapter.js';
+
 // Setup Bull Board UI
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');
 
 createBullBoard({
-  queues: [new BullMQAdapter(emailQueue as any) as any],
+  queues: [new SafeBullMQAdapter(emailQueue as any) as any],
   serverAdapter,
 });
 
 app.use('/admin/queues', serverAdapter.getRouter());
+
 
 // API Routes
 app.use('/api/auth', authRoutes);

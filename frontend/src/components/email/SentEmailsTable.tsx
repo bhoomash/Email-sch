@@ -40,16 +40,16 @@ export const SentEmailsTable: React.FC<SentEmailsTableProps> = ({
   }
 
   return (
-    <div className="bg-white border border-gray-300 rounded-none overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+    <div className="bg-white border border-gray-300 rounded-none overflow-hidden shadow-sm w-full">
+      <div className="overflow-x-auto w-full">
+        <table className="w-full text-left border-collapse min-w-[640px]">
           <thead>
             <tr className="border-b border-gray-200 bg-[#f8faf9] text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              <th className="py-3.5 px-4">Recipient</th>
-              <th className="py-3.5 px-4">Subject</th>
-              <th className="py-3.5 px-4">Sender</th>
-              <th className="py-3.5 px-4">Sent Time</th>
-              <th className="py-3.5 px-4">Status</th>
+              <th className="py-3 px-3.5">Recipient</th>
+              <th className="py-3 px-3.5">Subject</th>
+              <th className="py-3 px-3.5">Sender</th>
+              <th className="py-3 px-3.5">Sent Time</th>
+              <th className="py-3 px-3.5">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 text-sm">
@@ -59,18 +59,18 @@ export const SentEmailsTable: React.FC<SentEmailsTableProps> = ({
                 onClick={() => onSelectEmail(email)}
                 className="hover:bg-[#f4f6f4] transition-colors cursor-pointer"
               >
-                <td className="py-3.5 px-4 font-bold text-gray-900">
+                <td className="py-3 px-3.5 font-bold text-gray-900">
                   <div className="flex items-center gap-2">
-                    <FiMail className="w-4 h-4 text-gray-500" />
-                    <span>{email.recipient}</span>
+                    <FiMail className="w-4 h-4 text-gray-500 shrink-0" />
+                    <span className="truncate max-w-[160px] sm:max-w-none">{email.recipient}</span>
                   </div>
                 </td>
-                <td className="py-3.5 px-4 text-gray-800 max-w-xs truncate">{email.subject}</td>
-                <td className="py-3.5 px-4 text-gray-600 text-xs">{email.sender?.email || email.senderId}</td>
-                <td className="py-3.5 px-4 text-gray-700 text-xs">
+                <td className="py-3 px-3.5 text-gray-800 max-w-xs truncate">{email.subject}</td>
+                <td className="py-3 px-3.5 text-gray-600 text-xs truncate max-w-[140px]">{email.sender?.email || email.senderId}</td>
+                <td className="py-3 px-3.5 text-gray-700 text-xs whitespace-nowrap">
                   {email.sentAt ? new Date(email.sentAt).toLocaleString() : 'N/A'}
                 </td>
-                <td className="py-3.5 px-4">
+                <td className="py-3 px-3.5 whitespace-nowrap">
                   <EmailStatusBadge status={email.status} />
                 </td>
               </tr>
@@ -80,7 +80,7 @@ export const SentEmailsTable: React.FC<SentEmailsTableProps> = ({
       </div>
 
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-[#f8faf9] text-xs text-gray-600">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-gray-200 bg-[#f8faf9] text-xs text-gray-600">
           <div>
             Showing <span className="font-bold text-gray-900">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
             <span className="font-bold text-gray-900">
@@ -111,5 +111,6 @@ export const SentEmailsTable: React.FC<SentEmailsTableProps> = ({
       )}
     </div>
   );
+
 };
 

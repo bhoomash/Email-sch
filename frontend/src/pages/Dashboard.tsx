@@ -9,7 +9,7 @@ import { ComposeEmailModal } from '../components/email/ComposeEmailModal';
 import { EmailDetailView } from '../components/email/EmailDetailView';
 import { EmailItem } from '../types/email';
 import { Toast, ToastMessage } from '../components/ui/Toast';
-import { FiSearch, FiPlus } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiClock, FiSend } from 'react-icons/fi';
 import { Button } from '../components/ui/Button';
 
 export const Dashboard: React.FC = () => {
@@ -79,9 +79,9 @@ export const Dashboard: React.FC = () => {
 
       <div className="space-y-5">
         {/* Top Control Header with Search & Compose */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-1">
           {/* Search Box */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 w-full max-w-full sm:max-w-md">
             <FiSearch className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -101,10 +101,14 @@ export const Dashboard: React.FC = () => {
             variant="primary"
             onClick={() => setIsComposeOpen(true)}
             leftIcon={<FiPlus className="w-4 h-4" />}
+            className="w-full sm:w-auto"
           >
             Compose New Email
           </Button>
         </div>
+
+
+
 
         {/* View Switching: Detail View vs List View */}
         {selectedEmail ? (
