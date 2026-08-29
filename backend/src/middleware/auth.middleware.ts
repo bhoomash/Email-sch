@@ -5,34 +5,26 @@ import { AuthService } from '../services/auth.service.js';
 import { logger } from '../utils/logger.js';
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // 1. Passport session authentication (Google OAuth)
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
   }
 
-  // Developer auth fallback if DEV_AUTH_MODE is active
-  if (env.DEV_AUTH_MODE === 'true') {
+  // 2. Session userId resolution (Dev Login or explicit session)
+  const sessionUserId = (req.session as any)?.userId;
+  if (sessionUserId) {
     try {
-      if ((req.session as any)?.userId) {
-        const devUser = await AuthService.getUserById((req.session as any).userId);
-        if (devUser) {
-          req.user = devUser;
-          return next();
-        }
+      const user = await AuthService.getUserById(sessionUserId);
+      if (user) {
+        req.user = user;
+        return next();
       }
-
-      // Auto-attach default demo user in dev mode
-      const defaultUser = await AuthService.getDevUser();
-      req.user = defaultUser;
-      (req.session as any).userId = defaultUser.id;
-      return next();
     } catch (error) {
-      logger.warn('Database unavailable for dev auth — returning 503');
-      return res.status(503).json({
-        success: false,
-        message: 'Database is waking up (Neon cold start). Please retry in a few seconds.',
-      });
+      logger.warn({ sessionUserId }, 'Database error resolving session user');
     }
   }
 
+  // 3. Reject unauthenticated requests
   return next(new UnauthorizedError('Authentication required'));
 }
+
