@@ -1,4 +1,4 @@
-import { prisma } from '../config/database.js';
+import { prisma, withDbRetry } from '../config/database.js';
 import { User } from '@prisma/client';
 
 export class AuthService {
@@ -15,58 +15,63 @@ export class AuthService {
 
     const avatar = profile.photos?.[0]?.value || null;
 
-    let user = await prisma.user.findUnique({
-      where: { googleId: profile.id },
-    });
-
-    if (!user) {
-      // Check if user exists by email
-      const existingEmailUser = await prisma.user.findUnique({
-        where: { email },
+    return withDbRetry(async () => {
+      let user = await prisma.user.findUnique({
+        where: { googleId: profile.id },
       });
 
-      if (existingEmailUser) {
-        user = await prisma.user.update({
-          where: { id: existingEmailUser.id },
-          data: { googleId: profile.id, avatar },
+      if (!user) {
+        const existingEmailUser = await prisma.user.findUnique({
+          where: { email },
         });
-      } else {
-        user = await prisma.user.create({
-          data: {
-            googleId: profile.id,
-            email,
-            name: profile.displayName || email.split('@')[0],
-            avatar,
-          },
-        });
-      }
-    }
 
-    return user;
+        if (existingEmailUser) {
+          user = await prisma.user.update({
+            where: { id: existingEmailUser.id },
+            data: { googleId: profile.id, avatar },
+          });
+        } else {
+          user = await prisma.user.create({
+            data: {
+              googleId: profile.id,
+              email,
+              name: profile.displayName || email.split('@')[0],
+              avatar,
+            },
+          });
+        }
+      }
+
+      return user;
+    });
   }
 
   static async getDevUser(email = 'demo@reachinbox.ai', name = 'Demo User'): Promise<User> {
-    let user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          googleId: `dev-${Date.now()}`,
-          email,
-          name,
-          avatar: 'https://lh3.googleusercontent.com/a/default-user=s96-c',
-        },
+    return withDbRetry(async () => {
+      let user = await prisma.user.findUnique({
+        where: { email },
       });
-    }
 
-    return user;
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            googleId: `dev-${Date.now()}`,
+            email,
+            name,
+            avatar: 'https://lh3.googleusercontent.com/a/default-user=s96-c',
+          },
+        });
+      }
+
+      return user;
+    });
   }
 
   static async getUserById(id: string): Promise<User | null> {
-    return prisma.user.findUnique({
-      where: { id },
+    return withDbRetry(async () => {
+      return prisma.user.findUnique({
+        where: { id },
+      });
     });
   }
 }

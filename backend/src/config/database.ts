@@ -8,7 +8,7 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: [], // Suppress Prisma's internal error logs (we handle them ourselves)
+    log: [],
   });
 
 if (process.env.NODE_ENV !== 'production') {
@@ -16,10 +16,38 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 /**
- * Health check with retry logic for Neon serverless cold starts.
- * Neon databases auto-suspend after inactivity and take 2-5 seconds to wake up.
+ * Retry wrapper for Prisma operations that may fail due to Neon cold starts.
+ * Automatically retries on PrismaClientInitializationError (can't reach DB).
  */
-export async function checkDatabaseHealth(retries = 3, delayMs = 3000): Promise<boolean> {
+export async function withDbRetry<T>(
+  operation: () => Promise<T>,
+  retries = 3,
+  delayMs = 3000
+): Promise<T> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      const isConnectionError =
+        error?.name === 'PrismaClientInitializationError' ||
+        error?.code === 'P1001' ||
+        error?.code === 'P2024';
+
+      if (isConnectionError && attempt < retries) {
+        logger.info(`⏳ Database reconnecting (attempt ${attempt}/${retries})...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Database operation failed after retries');
+}
+
+/**
+ * Health check with retry logic for Neon serverless cold starts.
+ */
+export async function checkDatabaseHealth(retries = 5, delayMs = 4000): Promise<boolean> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await prisma.$queryRaw`SELECT 1`;
