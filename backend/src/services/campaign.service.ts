@@ -65,6 +65,9 @@ export class CampaignService {
       });
 
       return { campaign: campaignRecord, createdEmails: emails };
+    }, {
+      maxWait: 10000,  // Wait up to 10s for a connection from the pool
+      timeout: 30000,  // Allow up to 30s for the transaction to complete
     });
 
     // 3. Enqueue BullMQ delayed jobs
