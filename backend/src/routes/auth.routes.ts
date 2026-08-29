@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import passport from 'passport';
 import { AuthController } from '../controllers/auth.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -16,8 +17,8 @@ router.get(
 // Dev auth login endpoint
 router.post('/dev-login', AuthController.devLogin);
 
-// Current user profile
-router.get('/me', AuthController.getCurrentUser);
+// Current user profile (uses requireAuth to guarantee req.user resolution)
+router.get('/me', requireAuth, AuthController.getCurrentUser);
 
 // Logout
 router.post('/logout', AuthController.logout);

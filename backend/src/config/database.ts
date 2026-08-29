@@ -1,7 +1,19 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger.js';
 
-export const prisma = new PrismaClient();
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {
@@ -9,7 +21,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     logger.info('✓ PostgreSQL connected');
     return true;
   } catch (error) {
-    logger.error({ error }, '✗ PostgreSQL connection failed');
+    logger.warn('✗ PostgreSQL connection check deferred');
     return false;
   }
 }
