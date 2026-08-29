@@ -2,6 +2,9 @@ import { prisma, withDbRetry } from '../config/database.js';
 import { User } from '@prisma/client';
 
 export class AuthService {
+  private static devUserPromise: Promise<User> | null = null;
+  private static devUserCache: User | null = null;
+
   static async findOrCreateGoogleUser(profile: {
     id: string;
     displayName: string;
@@ -47,7 +50,15 @@ export class AuthService {
   }
 
   static async getDevUser(email = 'demo@reachinbox.ai', name = 'Demo User'): Promise<User> {
-    return withDbRetry(async () => {
+    if (this.devUserCache) {
+      return this.devUserCache;
+    }
+
+    if (this.devUserPromise) {
+      return this.devUserPromise;
+    }
+
+    this.devUserPromise = withDbRetry(async () => {
       let user = await prisma.user.findUnique({
         where: { email },
       });
@@ -63,11 +74,21 @@ export class AuthService {
         });
       }
 
+      this.devUserCache = user;
       return user;
+    }).catch((err) => {
+      this.devUserPromise = null;
+      throw err;
     });
+
+    return this.devUserPromise;
   }
 
   static async getUserById(id: string): Promise<User | null> {
+    if (this.devUserCache && this.devUserCache.id === id) {
+      return this.devUserCache;
+    }
+
     return withDbRetry(async () => {
       return prisma.user.findUnique({
         where: { id },

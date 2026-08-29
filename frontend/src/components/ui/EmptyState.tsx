@@ -9,11 +9,12 @@ interface EmptyStateProps {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, action }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-900/30 border border-dashed border-slate-800 rounded-xl my-4">
-      {icon && <div className="mb-4 text-slate-500 bg-slate-900 p-3 rounded-xl border border-slate-800">{icon}</div>}
-      <h4 className="text-base font-semibold text-slate-200 mb-1">{title}</h4>
-      <p className="text-sm text-slate-400 max-w-sm mb-6">{description}</p>
+    <div className="flex flex-col items-center justify-center p-12 text-center bg-white border border-gray-300 rounded-none my-4 shadow-sm">
+      {icon && <div className="mb-4 text-[#00a854] bg-[#e6f4ea] p-3 rounded-none border border-emerald-300">{icon}</div>}
+      <h4 className="text-base font-bold text-gray-900 mb-1">{title}</h4>
+      <p className="text-sm text-gray-500 max-w-sm mb-6">{description}</p>
       {action}
     </div>
   );
 };
+

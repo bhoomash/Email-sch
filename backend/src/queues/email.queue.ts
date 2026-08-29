@@ -2,13 +2,9 @@ import { Queue } from 'bullmq';
 import { redisConnection } from '../config/redis.js';
 import { generateBullJobId } from '../utils/idempotency.js';
 import { logger } from '../utils/logger.js';
+import { processEmailJob, EmailJobData } from './email.processor.js';
 
-export interface EmailJobData {
-  emailId: string;
-  campaignId: string;
-  senderId: string;
-  userId: string;
-}
+export type { EmailJobData };
 
 export const EMAIL_QUEUE_NAME = 'email-queue';
 
@@ -38,9 +34,19 @@ export async function enqueueEmailJob(data: EmailJobData, delayMs: number): Prom
     return job.id!;
   } catch (error: any) {
     logger.warn(
-      { emailId: data.emailId, error: error.message },
-      '⚠️ Redis is offline — BullMQ job enqueue deferred (email remains SCHEDULED in database)'
+      { emailId: data.emailId, delayMs, error: error.message },
+      '⚠️ Redis is offline — activating in-process timer fallback to dispatch email job'
     );
+
+    // Fallback: Schedule in-process dispatch using setTimeout / setImmediate
+    setTimeout(async () => {
+      try {
+        await processEmailJob(data, enqueueEmailJob);
+      } catch (err: any) {
+        logger.error({ emailId: data.emailId, err }, 'In-process fallback email dispatch failed');
+      }
+    }, Math.max(0, delayMs));
+
     return jobId;
   }
 }

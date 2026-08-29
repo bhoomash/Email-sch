@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSlack } from '../../hooks/useSlack';
 import { Button } from '../ui/Button';
-import { MessageSquare, Check, Power, AlertTriangle } from 'lucide-react';
+import { FiMessageSquare, FiCheck, FiPower } from 'react-icons/fi';
 
 export const SlackConnection: React.FC = () => {
   const { status, isLoading, getConnectUrl, mockConnect, disconnect, isDisconnecting } = useSlack();
@@ -20,8 +20,8 @@ export const SlackConnection: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-400">
-        <MessageSquare className="w-3.5 h-3.5 animate-pulse" />
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f4f6f4] border border-gray-300 rounded-none text-xs text-gray-500 font-medium">
+        <FiMessageSquare className="w-3.5 h-3.5 animate-pulse text-[#00a854]" />
         Checking Slack...
       </div>
     );
@@ -30,18 +30,18 @@ export const SlackConnection: React.FC = () => {
   return (
     <div className="flex items-center gap-2">
       {status.isConnected ? (
-        <div className="flex items-center gap-2 bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs">
-          <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-            <Check className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2 bg-[#e6f4ea] border border-emerald-300 px-3 py-1.5 rounded-none text-xs">
+          <span className="flex items-center gap-1.5 text-emerald-950 font-bold">
+            <FiCheck className="w-3.5 h-3.5 text-[#00a854]" />
             Slack: {status.teamName || 'Connected'}
           </span>
           <button
             onClick={() => disconnect()}
             disabled={isDisconnecting}
-            className="text-slate-400 hover:text-rose-400 transition-colors ml-1"
+            className="text-gray-400 hover:text-rose-600 transition-colors ml-1"
             title="Disconnect Slack"
           >
-            <Power className="w-3.5 h-3.5" />
+            <FiPower className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : (
@@ -50,13 +50,13 @@ export const SlackConnection: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={handleConnect}
-            leftIcon={<MessageSquare className="w-3.5 h-3.5 text-emerald-400" />}
+            leftIcon={<FiMessageSquare className="w-3.5 h-3.5 text-[#00a854]" />}
           >
             Connect Slack
           </Button>
           <button
             onClick={() => mockConnect()}
-            className="text-[10px] text-slate-500 hover:text-slate-300 underline"
+            className="text-[10px] text-gray-400 hover:text-gray-700 underline font-medium"
             title="Quick dev connect without live client secret"
           >
             (Dev Connect)
@@ -66,3 +66,4 @@ export const SlackConnection: React.FC = () => {
     </div>
   );
 };
+

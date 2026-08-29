@@ -6,6 +6,7 @@ import { checkDatabaseHealth, prisma } from './config/database.js';
 import { checkRedisHealth, redisConnection } from './config/redis.js';
 import { emailQueue } from './queues/email.queue.js';
 import { emailWorker } from './queues/email.worker.js';
+import { SchedulerService } from './services/scheduler.service.js';
 
 const PORT = env.PORT || 5000;
 
@@ -18,7 +19,10 @@ async function startServer() {
     });
 
     // 2. Perform service connectivity checks asynchronously
-    checkDatabaseHealth().catch((err) => logger.warn({ err }, 'PostgreSQL health notice'));
+    checkDatabaseHealth().then(() => {
+      SchedulerService.recoverScheduledEmails().catch((err) => logger.warn({ err }, 'Email recovery notice'));
+    }).catch((err) => logger.warn({ err }, 'PostgreSQL health notice'));
+
     checkRedisHealth().catch((err) => logger.warn({ err }, 'Redis health notice'));
     initElasticsearch().catch((err) => logger.warn({ err }, 'Elasticsearch notice'));
 

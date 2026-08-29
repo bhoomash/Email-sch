@@ -1,4 +1,4 @@
-import { prisma } from '../config/database.js';
+import { prisma, withDbRetry } from '../config/database.js';
 import { SearchService } from './search.service.js';
 import { NotFoundError, ForbiddenError } from '../utils/errors.js';
 
@@ -18,29 +18,31 @@ export class EmailService {
       status: { in: ['SCHEDULED' as const, 'PROCESSING' as const, 'RATE_LIMITED' as const] },
     };
 
-    const [items, total] = await Promise.all([
-      prisma.email.findMany({
-        where: whereClause,
-        orderBy: { scheduledAt: 'asc' },
-        skip,
-        take: limit,
-        include: {
-          sender: { select: { email: true } },
-          campaign: { select: { subject: true } },
-        },
-      }),
-      prisma.email.count({ where: whereClause }),
-    ]);
+    return withDbRetry(async () => {
+      const [items, total] = await Promise.all([
+        prisma.email.findMany({
+          where: whereClause,
+          orderBy: { scheduledAt: 'asc' },
+          skip,
+          take: limit,
+          include: {
+            sender: { select: { email: true } },
+            campaign: { select: { subject: true } },
+          },
+        }),
+        prisma.email.count({ where: whereClause }),
+      ]);
 
-    return {
-      items,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+      return {
+        items,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    });
   }
 
   static async getSentEmails(userId: string, options: PaginationOptions = {}) {
@@ -53,56 +55,60 @@ export class EmailService {
       status: { in: ['SENT' as const, 'FAILED' as const] },
     };
 
-    const [items, total] = await Promise.all([
-      prisma.email.findMany({
-        where: whereClause,
-        orderBy: { sentAt: 'desc' },
-        skip,
-        take: limit,
-        include: {
-          sender: { select: { email: true } },
-          campaign: { select: { subject: true } },
-        },
-      }),
-      prisma.email.count({ where: whereClause }),
-    ]);
+    return withDbRetry(async () => {
+      const [items, total] = await Promise.all([
+        prisma.email.findMany({
+          where: whereClause,
+          orderBy: { sentAt: 'desc' },
+          skip,
+          take: limit,
+          include: {
+            sender: { select: { email: true } },
+            campaign: { select: { subject: true } },
+          },
+        }),
+        prisma.email.count({ where: whereClause }),
+      ]);
 
-    return {
-      items,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+      return {
+        items,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    });
   }
 
   static async getEmailById(userId: string, emailId: string) {
-    const email = await prisma.email.findUnique({
-      where: { id: emailId },
-      include: {
-        campaign: true,
-        sender: {
-          select: {
-            id: true,
-            email: true,
-            smtpHost: true,
-            smtpPort: true,
+    return withDbRetry(async () => {
+      const email = await prisma.email.findUnique({
+        where: { id: emailId },
+        include: {
+          campaign: true,
+          sender: {
+            select: {
+              id: true,
+              email: true,
+              smtpHost: true,
+              smtpPort: true,
+            },
           },
         },
-      },
+      });
+
+      if (!email) {
+        throw new NotFoundError('Email not found');
+      }
+
+      if (email.campaign.userId !== userId) {
+        throw new ForbiddenError('Access denied');
+      }
+
+      return email;
     });
-
-    if (!email) {
-      throw new NotFoundError('Email not found');
-    }
-
-    if (email.campaign.userId !== userId) {
-      throw new ForbiddenError('Access denied');
-    }
-
-    return email;
   }
 
   static async searchEmails(userId: string, queryText: string) {
@@ -113,23 +119,23 @@ export class EmailService {
     }
 
     // 2. Fallback to PostgreSQL database search if Elasticsearch is offline or index empty
-    const dbHits = await prisma.email.findMany({
-      where: {
-        campaign: { userId },
-        OR: [
-          { recipient: { contains: queryText, mode: 'insensitive' } },
-          { subject: { contains: queryText, mode: 'insensitive' } },
-          { body: { contains: queryText, mode: 'insensitive' } },
-        ],
-      },
-      include: {
-        sender: { select: { email: true } },
-        campaign: { select: { subject: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
+    return withDbRetry(async () => {
+      return prisma.email.findMany({
+        where: {
+          campaign: { userId },
+          OR: [
+            { recipient: { contains: queryText, mode: 'insensitive' } },
+            { subject: { contains: queryText, mode: 'insensitive' } },
+            { body: { contains: queryText, mode: 'insensitive' } },
+          ],
+        },
+        include: {
+          sender: { select: { email: true } },
+          campaign: { select: { subject: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
     });
-
-    return dbHits;
   }
 }
